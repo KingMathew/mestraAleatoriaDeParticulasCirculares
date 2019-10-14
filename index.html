@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Modelación micromecánica</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="three.min.js"></script>
+    <script src="TrackballControls.js"></script>
+
+    <style>
+        table {
+            border-collapse: collapse;
+        }
+        
+        table,
+        th,
+        td {
+            border: 1px solid black;
+        }
+    </style>
+
+</head>
+
+<body>
+    <br>
+    <div class="container">
+        <div class="row">
+            <div class="col-sm" style="height: 700px; background-color: #66BB6A">
+                <p>Ingrese los siguientes datos</p>
+                <br>
+                <p>Base del poliedro (m)</p>
+                <input id="base" type="number" placeholder="000">
+                <br>
+                <br>
+                <p>Profunddidad del poliedro (m)</p>
+                <input id="depth" type="number" placeholder="000">
+                <br>
+                <br>
+                <p>Altura del poliedro (m)</p>
+                <input id="height" type="number" placeholder="000">
+                <br>
+                <br>
+                <p>Radio de la esfera (m)</p>
+                <input id="radio" type="number" placeholder="000">
+                <br>
+                <br>
+                <br>
+                <button class="btn btn-dark" id="buttonCalculate">CALCULAR</button>
+
+            </div>
+            <div class="col-sm" style="height: 700px; background-color: #B2DFDB; text-align: center">
+                <h3>RESULTADOS</h3>
+
+                <table style="width:100%;">
+                    <tr>
+                        <td>Cantidad de esfera(s)</td>
+                        <td id="cantidadEsferas">.......</td>
+                    </tr>
+                    <tr>
+                        <td>Volumen de vacío</td>
+                        <td id="volumenVacio">........</td>
+                    </tr>
+                    <tr>
+                        <td>Porosidad</td>
+                        <td id="porosidad">........</td>
+                    </tr>
+                    <tr>
+                        <td>Relación de vacios</td>
+                        <td id="relacionVacios">.........</td>
+                    </tr>
+
+                    <tr>
+                        <td>Contactos</td>
+                        <td id="contactos">.........</td>
+                    </tr>
+                </table>
+
+                <br>
+                <br>
+                <div id="myDiv">
+                    <!-- Espacio para la gráfica -->
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE LOS CÁLCULOS -->
+    <script>
+        $(document).ready(function() {
+            $("#base").val(10);
+            $("#depth").val(10);
+            $("#height").val(10);
+            $("#radio").val(1);
+        });
+
+        $("#buttonCalculate").click(function() {
+
+            var base = $("#base").val();
+            var depth = $("#depth").val();
+            var height = $("#height").val();
+            var radio = $("#radio").val();
+
+            if (base != undefined && base != "" &&
+                depth != undefined && depth != "" &&
+                height != undefined && height != "" &&
+                radio != undefined && radio != "") {
+
+                calculateValues(base, height, depth, radio);
+
+            } else {
+                alert("Ingrese los datos para poder continuar");
+            }
+
+        });
+
+        function calculateValues(b, h, d, r) {
+
+            var volume = b * d * h;
+            var radioEsferaTotal = Math.pow(r, 3) * (1.3) * (3.14159);
+            var cantidadEsferasCubo = volume / radioEsferaTotal;
+
+            var cantidadEsferasCuboTotal = Math.floor(cantidadEsferasCubo);
+            $("#cantidadEsferas").html(cantidadEsferasCuboTotal);
+
+
+            initSimulation(b, h, d, cantidadEsferasCuboTotal);
+
+            var volumenTotalEsferas = Math.floor(cantidadEsferasCubo) * Math.floor(radioEsferaTotal);
+            var volumenVacios = volume - volumenTotalEsferas;
+            $("#volumenVacio").html(volumenVacios);
+
+            var porosidad = Math.floor((volumenVacios / volume) * 100);
+            $("#porosidad").html(porosidad + "%");
+
+            var relacionVacios = porosidad / (100 - porosidad);
+            $("#relacionVacios").html(relacionVacios);
+
+
+            var contactos = "";
+            switch (parseInt(cantidadEsferasCubo)) {
+                case 0, 1:
+                    contactos = "Cero contactos";
+                    break;
+                case 2:
+                    contactos = "Un contacto";
+                    break;
+                case 3, 4:
+                    contactos = "Dos contactos";
+                    break;
+                case 5, 6:
+                    contactos = "Min 2 contactos - Max 3 contactos";
+                    break;
+                case 7, 8:
+                    contactos = "Min 2 contactos - Max 4 contactos";
+                    break;
+                default:
+                    contactos = "Min 2 contactos - Max 4 contactos";
+                    break;
+            }
+            $("#contactos").html(contactos);
+        }
+    </script>
+
+
+
+    <!-- SCRIPT DE LA GRÁFICA -->
+    <script>
+        var data = [{
+            type: "scatterpolar",
+            name: "Nombre de la gráfica",
+            r: [10, 8, 6, 18, 14, 5, 6, 2, 1],
+            theta: [10, 30, 50, 70, 90, 110, 130, 150, 170],
+            thetaunit: "grades",
+            fill: "toself",
+            subplot: "polar2"
+        }]
+
+        var layout = {
+            showlegend: true,
+            polar2: {
+                domain: {
+                    x: [0, 1],
+                    y: [0, 1]
+                },
+                radialaxis: {
+                    angle: 180,
+                    tickangle: -180
+                }
+            }
+        }
+
+        Plotly.newPlot('myDiv', data, layout, {
+            showSendToCloud: true
+        })
+    </script>
+
+    <!-- SCRIPT DE LA SIMULACIÓN -->
+    <script>
+        var scene, camera, renderer;
+        var canvas;
+        var controls;
+        var cameraAndLight;
+        var balls = [];
+        var BALL_COUNT;
+        var base;
+        var height;
+        var deepth;
+        var lim;
+
+        function createWorld() {
+
+            renderer.setClearColor(0);
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(28, window.innerWidth / window.innerHeight, 0.1, 100);
+            var light = new THREE.DirectionalLight();
+            var clock;
+            light.position.set(0, 0, 1);
+            camera.position.set(25, 40, 50);
+            camera.lookAt(scene.position);
+            camera.add(light);
+            scene.add(camera);
+
+            var cube = new THREE.Mesh(
+                new THREE.BoxGeometry(base, height, deepth),
+                new THREE.MeshPhongMaterial({
+                    polygonOffset: true,
+                    polygonOffsetUnits: 1,
+                    polygonOffsetFactor: 1,
+                    color: "white",
+                    specular: 0x202020,
+                    transparent: true,
+                    opacity: 0.3
+                })
+            );
+            scene.add(cube);
+
+            var edgeGeometry = new THREE.EdgesGeometry(cube.geometry);
+            cube.add(new THREE.LineSegments(edgeGeometry, new THREE.LineBasicMaterial({
+                color: 0xffffff
+            })));
+
+            var geom = new THREE.SphereGeometry(1, 20, 12);
+            for (var i = 0; i < BALL_COUNT; i++) {
+                var ball = {};
+                balls.push(ball);
+
+                ball.obj = new THREE.Mesh(
+                    geom,
+                    new THREE.MeshPhongMaterial({
+                        color: Math.floor(Math.random() * 0x1000000),
+                        specular: 0x080808,
+                        shininess: 32
+                    })
+                );
+
+                ball.x = lim * 2 * Math.random() - lim;
+                ball.y = lim * 2 * Math.random() - lim;
+                ball.z = lim * 2 * Math.random() - lim;
+                ball.dx = Math.random() * 6 + 2;
+                ball.dy = Math.random() * 6 + 2;
+                ball.dz = Math.random() * 6 + 2;
+                if (Math.random() < 0.5)
+                    ball.dx = -ball.dx;
+                if (Math.random() < 0.5)
+                    ball.dy = -ball.dy;
+                if (Math.random() < 0.5)
+                    ball.dz = -ball.dz;
+
+                ball.obj.position.set(ball.x, ball.y, ball.z);
+                scene.add(ball.obj);
+            }
+        }
+
+        function render() {
+            renderer.render(scene, camera);
+        }
+
+        function updateForFrame() {
+            var dt = clock.getDelta();
+            for (var i = 0; i < balls.length; i++) {
+                var ball = balls[i];
+
+                ball.x += ball.dx * dt;
+                ball.y += ball.dy * dt;
+                ball.z += ball.dz * dt;
+
+                /* En caso de que las esferas superen el límite del cubo */
+                if (ball.x > lim) {
+                    ball.x -= 2 * (ball.x - lim);
+                    ball.dx = -Math.abs(ball.dx);
+                } else if (ball.x < -lim) {
+                    ball.x += 2 * (-lim - ball.x);
+                    ball.dx = Math.abs(ball.dx);
+                }
+                if (ball.y > lim) {
+                    ball.y -= 2 * (ball.y - lim);
+                    ball.dy = -Math.abs(ball.dy);
+                } else if (ball.y < -lim) {
+                    ball.y += 2 * (-lim - ball.y);
+                    ball.dy = Math.abs(ball.dy);
+                }
+                if (ball.z > lim) {
+                    ball.z -= 2 * (ball.z - lim);
+                    ball.dz = -Math.abs(ball.dz);
+                } else if (ball.z < -lim) {
+                    ball.z += 2 * (-lim - ball.z);
+                    ball.dz = Math.abs(ball.dz);
+                }
+
+                ball.obj.position.set(ball.x, ball.y, ball.z);
+            }
+        }
+
+
+        function doFrame() {
+            updateForFrame();
+            controls.update();
+            render();
+            requestAnimationFrame(doFrame);
+        }
+
+
+        function doResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+
+        function initSimulation(b, h, d, balls) {
+
+            BALL_COUNT = balls;
+            base = b;
+            height = h;
+            deepth = d;
+            lim = (base / 2) - 1;
+
+            try {
+                try {
+                    renderer = new THREE.WebGLRenderer({
+                        antialias: true
+                    });
+                } catch (e) {
+                    document.body.innerHTML = "<h3><b>Sorry, WebGL is required but is not available.</b><h3>";
+                    return;
+                }
+                canvas = renderer.domElement;
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                window.addEventListener("resize", doResize, false);
+                document.body.appendChild(canvas);
+                clock = new THREE.Clock();
+                createWorld();
+                controls = new THREE.TrackballControls(camera, canvas);
+                controls.noPan = true;
+                controls.noZoom = true;
+                requestAnimationFrame(doFrame);
+            } catch (e) {
+                document.body.innerHTML = "<h3><b>Sorry, an error occurred:<br>" + e + "</b></h3>";
+            }
+        }
+    </script>
+
+
+
+
+
+</body>
+
+</html>
